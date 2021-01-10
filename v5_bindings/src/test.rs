@@ -18,7 +18,7 @@ extern "Rust" {
     pub fn get_tests(robot: &'static Robot) -> Vec<TestItem>;
 }
 
-pub fn assert(val: bool, on_error: Box<dyn Display>) -> TestResult {
+pub fn assert(val: bool, on_error: String) -> TestResult {
     if val {
         Ok(())
     }
@@ -27,7 +27,7 @@ pub fn assert(val: bool, on_error: Box<dyn Display>) -> TestResult {
     }
 }
 
-pub type TestResult = Result<(), Box<dyn Display>>;
+pub type TestResult = Result<(), String>;
 
 const HEADER_COLOR: RGB8 = orange();
 const NAME_COLOR: RGB8 = cyan();
@@ -185,7 +185,7 @@ fn process_results(result: TestResult, name: String, header: &impl Display, pass
             passed_count.fetch_add(1, SeqCst);
         },
         Err(error) => {
-            console_print(&format!("{} {} \"{}\" in {}ms, error message: {}\n", header, "[FAILED]".fg(FAILED_COLOR), name.fg(NAME_COLOR), time.as_millis(), error));
+            console_print(&format!("{} {} \"{}\" in {}ms, error message: {}\n", header, "[FAILED]".fg(FAILED_COLOR), name.fg(NAME_COLOR), time.as_millis(), error.fg(red())));
             failed_count.fetch_add(1, SeqCst);
         },
     }

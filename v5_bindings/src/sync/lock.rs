@@ -182,10 +182,8 @@ unsafe impl Sync for ProsRwLock{}
 #[cfg(feature = "v5_test")]
 pub mod test{
     use alloc::boxed::Box;
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
     use core::time::Duration;
-
-    use ansi_rgb::{Foreground, red};
 
     use crate::sync::lock::{Mutex, RwLock};
     use crate::test::{assert, TestItem, TestResult};
@@ -197,14 +195,14 @@ pub mod test{
             let mutex = Mutex::new(153);
             let guard = mutex.try_lock();
 
-            assert(guard.is_some(), Box::new("try_lock on empty failed".fg(red())))?;
-            assert(mutex.try_lock().is_none(), Box::new("try_lock on locked succeeded".fg(red())))?;
-            assert(*guard.unwrap() == 153, Box::new(format!("guard access failed!")))?;
+            assert(guard.is_some(), "try_lock on empty failed".to_string())?;
+            assert(mutex.try_lock().is_none(), "try_lock on locked succeeded".to_string())?;
+            assert(*guard.unwrap() == 153, "guard access failed!".to_string())?;
 
             mutex.lock();
 
             Ok(())
-        }), Duration::from_millis(100)))
+        }), Duration::from_secs(1)))
     }
 
     #[allow(unused_must_use)]
@@ -213,22 +211,22 @@ pub mod test{
             let rwlock = RwLock::new(7353);
             let shared_guard = rwlock.try_read();
 
-            assert(shared_guard.is_some(), Box::new("try_read on empty failed".fg(red())))?;
-            assert(rwlock.try_read().is_some(), Box::new("try_read on shared failed".fg(red())))?;
-            assert(rwlock.try_write().is_none(), Box::new("try_write on shared succeeded".fg(red())))?;
-            assert(*shared_guard.unwrap() == 7353, Box::new("shared_guard read failed".fg(red())))?;
+            assert(shared_guard.is_some(), "try_read on empty failed".to_string())?;
+            assert(rwlock.try_read().is_some(), "try_read on shared failed".to_string())?;
+            assert(rwlock.try_write().is_none(), "try_write on shared succeeded".to_string())?;
+            assert(*shared_guard.unwrap() == 7353, "shared_guard read failed".to_string())?;
 
             let exclusive_guard = rwlock.try_write();
 
-            assert(exclusive_guard.is_some(), Box::new("try_write on empty failed".fg(red())))?;
-            assert(rwlock.try_read().is_none(), Box::new("try_read on exclusive succeeded".fg(red())))?;
-            assert(rwlock.try_write().is_none(), Box::new("try_write on exclusive succeeded".fg(red())))?;
-            assert(*exclusive_guard.unwrap() == 7353, Box::new("exclusive_guard read failed".fg(red())))?;
+            assert(exclusive_guard.is_some(), "try_write on empty failed".to_string())?;
+            assert(rwlock.try_read().is_none(), "try_read on exclusive succeeded".to_string())?;
+            assert(rwlock.try_write().is_none(), "try_write on exclusive succeeded".to_string())?;
+            assert(*exclusive_guard.unwrap() == 7353, "exclusive_guard read failed".to_string())?;
 
             rwlock.read();
             rwlock.write();
 
             Ok(())
-        }), Duration::from_millis(100)))
+        }), Duration::from_secs(1)))
     }
 }

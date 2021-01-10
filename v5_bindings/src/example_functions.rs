@@ -48,6 +48,7 @@ mod test {
     use crate::robot::Robot;
     use crate::sync::lock::test::{mutex_test, rw_lock_test};
     use crate::test::TestItem;
+    use crate::sync::queue::test::queue_test;
 
     // #[allow(improper_ctypes_definitions)]
     #[no_mangle]
@@ -56,6 +57,7 @@ mod test {
 
         out.push(mutex_test());
         out.push(rw_lock_test());
+        out.push(queue_test());
 
         out
     }
