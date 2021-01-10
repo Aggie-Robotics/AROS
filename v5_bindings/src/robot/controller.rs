@@ -16,9 +16,10 @@ pub struct Controller{
     id: Id,
 }
 impl Controller{
-    pub const fn get_all() -> [Self; 2] {
-        [Self { id: Master }, Self { id: Partner }]
+    pub(super) const fn new(id: Id) -> Self{
+        Self { id }
     }
+
     pub const fn id(&self) -> Id {
         self.id
     }

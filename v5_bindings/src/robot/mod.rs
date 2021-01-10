@@ -1,3 +1,8 @@
+pub mod motor;
+pub mod port;
+pub mod vision;
+pub mod controller;
+
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::sync::Arc;
@@ -6,17 +11,15 @@ use core::any::Any;
 use core::cell::*;
 use core::ops::{Deref, DerefMut};
 
-use crate::controller::Controller;
+use controller::*;
+
 use crate::robot::motor::Motor;
 use crate::robot::vision::Vision;
 use crate::sync::lock::*;
 
-pub mod motor;
-pub mod port;
-pub mod vision;
-
 pub struct Robot {
-    pub controllers: [Controller; 2],
+    pub master_controller: Controller,
+    pub partner_controller: Controller,
     pub motors: Vec<RobotComponent<Motor>>,
     pub visions: Vec<RobotComponent<Vision>>,
     pub user_data: Option<Box<dyn Any>>,
@@ -25,7 +28,8 @@ pub struct Robot {
 impl Robot {
     pub const fn new() -> Self {
         Self {
-            controllers: Controller::get_all(),
+            master_controller: Controller::new(Master),
+            partner_controller: Controller::new(Partner),
             motors: Vec::new(),
             visions: Vec::new(),
             user_data: None,

@@ -17,6 +17,7 @@ pub use crate::raw::pros::rtos::task_state_e_t as State;
 pub use crate::task::Task;
 pub use crate::task::TaskArgument;
 pub use crate::task::TaskFunction;
+
 // use std::sync::Mutex;
 
 pub mod raw;
@@ -26,7 +27,6 @@ pub mod robot;
 mod alloc_bindings;
 mod export_functions;
 
-pub mod controller;
 pub mod error;
 pub mod percent;
 pub mod task;
