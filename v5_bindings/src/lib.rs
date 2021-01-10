@@ -49,9 +49,3 @@ pub fn console_print(fmt: &impl Display){
 pub fn console_println(fmt: &impl Display){
     console_print(&format!("{}\n", fmt))
 }
-
-pub fn test(){
-    // let _x: Mutex<i32> = Mutex::new();
-    // let guard = x.lock().unwrap();
-    // println!("{}", guard);
-}
