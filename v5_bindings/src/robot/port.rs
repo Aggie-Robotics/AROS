@@ -12,7 +12,7 @@ pub struct Port {
 
 impl Port {
     #[cfg(not(feature = "zero_based_ports"))]
-    pub fn get_all() -> [Option<Self>; 22] {
+    pub(crate) fn get_all() -> [Option<Self>; 22] {
         <[Option<Self>; 22]>::init_with_indices(|i| {
             if i == 0 {
                 None
@@ -25,7 +25,7 @@ impl Port {
     }
 
     #[cfg(feature = "zero_based_ports")]
-    pub fn get_all() -> [Self; 21] {
+    pub(crate) fn get_all() -> [Self; 21] {
         <[Self; 21]>::init_with_indices(|i| { Self{ device: unsafe { vexDeviceGetByIndex(i as u32) } } })
     }
 

@@ -38,7 +38,7 @@ impl Controller{
         (unsafe {vexControllerGet(self.id, button.into())}) > 0
     }
 
-    pub fn set_text(&mut self, line: u32, col: u32, fmt: &impl Display) -> bool{
+    pub fn set_text(&self, line: u32, col: u32, fmt: &impl Display) -> bool{
         unsafe{vexControllerTextSet(self.id, line, col, fmt_to_char_ptr(fmt).as_ptr())}
     }
 
