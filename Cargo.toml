@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "v5_bindings",
+    "v5_rust",
+]

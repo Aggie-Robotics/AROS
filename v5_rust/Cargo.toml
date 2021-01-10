@@ -1,0 +1,17 @@
+[package]
+name = "v5_rust"
+version = "0.1.0"
+authors = ["buzzec"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+v5_test = ["v5_bindings/v5_test"]
+
+[dependencies]
+v5_bindings = { path = "../v5_bindings", features = ["example_functions"]}
+
+[lib]
+crate-type = ["staticlib"]

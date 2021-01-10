@@ -1,0 +1,25 @@
+[package]
+name = "v5_bindings"
+version = "0.1.0"
+authors = ["buzzec"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["zero_based_ports"]
+example_functions = []
+v5_test = []
+zero_based_ports = []
+
+[dependencies]
+cty = "0.2.1"
+cstr_core = { version = "^0.2", features = ["alloc"] }
+rgb = "0.8.25"
+lock_api = { version = "^0.4", features = ["nightly"] }
+init_with = "^1.1"
+ansi_rgb = "^0.2"
+num-derive = "^0.3"
+num-traits = { version = "^0.2", default-features = false }
+
+
