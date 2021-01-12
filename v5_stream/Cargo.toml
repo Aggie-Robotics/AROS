@@ -10,8 +10,7 @@ edition = "2018"
 v5_traits = { path = "../v5_traits", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"]}
 serde_cbor = { version = "0.11", default-features = false, features = ["alloc"] }
-num-traits = { version = "0.2", default-features = false }
-num-derive = "0.3"
+atomic = { version = "0.5", default-features = false }
 
 [features]
 defalut = ["std"]

@@ -5,27 +5,30 @@ extern crate std;
 extern crate alloc;
 
 pub mod multiplexed_stream;
-pub mod serialize_stream;
 
 use v5_traits::stream::*;
 
 use alloc::vec::Vec;
 use core::marker::PhantomData;
+use core::fmt::Debug;
 
-pub struct ComposedStream<T, S, R> where S: SendStream<T>, R: ReceiveStream<T>{
+//TODO: Make a binary packet handler
+
+#[derive(Debug)]
+pub struct ComposedStream<T, S, R> where T: Debug, S: SendStream<T>, R: ReceiveStream<T>{
     pub send_stream: S,
     pub receive_stream: R,
     phantom_t: PhantomData<T>,
 }
-impl<T, S, R> ComposedStream<T, S, R> where S: SendStream<T>, R: ReceiveStream<T>{
+impl<T, S, R> ComposedStream<T, S, R> where T: Debug, S: SendStream<T>, R: ReceiveStream<T>{
     pub fn new(send_stream: S, receive_stream: R) -> Self{
         Self{ send_stream, receive_stream, phantom_t: Default::default() }
     }
 }
-impl<T, S, R> SendStream<T> for ComposedStream<T, S, R> where S: SendStream<T>, R: ReceiveStream<T>{
+impl<T, S, R> SendStream<T> for ComposedStream<T, S, R> where T: Debug, S: SendStream<T>, R: ReceiveStream<T>{
     type Error = S::Error;
 
-    fn try_send(&self, val: T) -> Result<Option<T>, Self::Error> {
+    fn try_send(&self, val: T) -> Result<Result<(), T>, Self::Error> {
         self.send_stream.try_send(val)
     }
 
@@ -45,7 +48,7 @@ impl<T, S, R> SendStream<T> for ComposedStream<T, S, R> where S: SendStream<T>, 
         self.send_stream.send_vec(data)
     }
 }
-impl<T, S, R> ReceiveStream<T> for ComposedStream<T, S, R> where S: SendStream<T>, R: ReceiveStream<T>{
+impl<T, S, R> ReceiveStream<T> for ComposedStream<T, S, R> where T: Debug, S: SendStream<T>, R: ReceiveStream<T>{
     type Error = R::Error;
 
     fn try_receive(&self) -> Result<Option<T>, Self::Error> {
@@ -68,4 +71,4 @@ impl<T, S, R> ReceiveStream<T> for ComposedStream<T, S, R> where S: SendStream<T
         self.receive_stream.receive_vec(limit)
     }
 }
-impl<T, S, R> DuplexStream<T> for ComposedStream<T, S, R> where S: SendStream<T>, R: ReceiveStream<T>{}
+impl<T, S, R> DuplexStream<T> for ComposedStream<T, S, R> where T: Debug, S: SendStream<T>, R: ReceiveStream<T>{}

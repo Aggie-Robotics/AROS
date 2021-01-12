@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Check v5_traits" type="CompoundRunConfigurationType">
+    <toRun name="Check v5_traits for Target" type="CargoCommandRunConfiguration" />
+    <toRun name="Check v5_traits" type="CargoCommandRunConfiguration" />
+    <method v="2" />
+  </configuration>
+</component>

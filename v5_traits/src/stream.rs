@@ -2,11 +2,11 @@ use alloc::vec::Vec;
 use crate::error::Error;
 use core::fmt::Debug;
 
-pub trait SendStream<T>{
+pub trait SendStream<T>: Debug{
     type Error: Error;
 
     /// Returns None on success or Some on could not send without blocking
-    fn try_send(&self, val: T) -> Result<Option<T>, Self::Error>;
+    fn try_send(&self, val: T) -> Result<Result<(), T>, Self::Error>;
     fn send(&self, val: T) -> Result<(), Self::Error>;
     fn send_slice(&self, slice: &[T]) -> Result<usize, Self::Error> where T: Copy{
         for val in slice {
@@ -29,7 +29,7 @@ pub trait SendStream<T>{
     }
 }
 
-pub trait ReceiveStream<T>{
+pub trait ReceiveStream<T>: Debug{
     type Error: Error;
 
     fn try_receive(&self) -> Result<Option<T>, Self::Error>;
@@ -57,19 +57,19 @@ pub trait ReceiveStream<T>{
 }
 
 pub trait DuplexStream<T>: SendStream<T> + ReceiveStream<T>{}
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum DuplexError<S, R> where S: Error, R: Error{
     SendError(S),
     ReceiveError(R),
 }
 impl<S, R> Error for DuplexError<S, R> where S: Error, R: Error{}
 
-pub trait MessageStreamCreator<T> where T: 'static + Send{
+pub trait MessageStreamCreator<T>: Debug where T: 'static + Send{
     type Sender: SendStream<T> + Send + Sync;
     type Receiver: ReceiveStream<T> + Send + Sync;
 
-    fn create_stream(&mut self) -> (Self::Sender, Self::Receiver);
-    fn create_bidirectional_stream(&mut self) -> ((Self::Sender, Self::Receiver), (Self::Sender, Self::Receiver)){
+    fn create_stream(&self) -> (Self::Sender, Self::Receiver);
+    fn create_bidirectional_stream(&self) -> ((Self::Sender, Self::Receiver), (Self::Sender, Self::Receiver)){
         let stream1 = self.create_stream();
         let stream2 = self.create_stream();
         (stream1, stream2)
