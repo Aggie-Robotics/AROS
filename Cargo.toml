@@ -1,5 +1,8 @@
 [workspace]
 members = [
     "v5_bindings",
+    "v5_packet",
     "v5_rust",
+    "v5_stream",
+    "v5_traits",
 ]

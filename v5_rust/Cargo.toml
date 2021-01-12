@@ -12,6 +12,7 @@ v5_test = ["v5_bindings/v5_test"]
 
 [dependencies]
 v5_bindings = { path = "../v5_bindings", features = ["example_functions"]}
+v5_packet = { path = "../v5_packet" }
 
 [lib]
 crate-type = ["staticlib"]

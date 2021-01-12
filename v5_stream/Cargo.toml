@@ -1,0 +1,18 @@
+[package]
+name = "v5_stream"
+version = "0.1.0"
+authors = ["buzzec <buzzec@buzzec.net>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+v5_traits = { path = "../v5_traits", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive", "alloc"]}
+serde_cbor = { version = "0.11", default-features = false, features = ["alloc"] }
+num-traits = { version = "0.2", default-features = false }
+num-derive = "0.3"
+
+[features]
+defalut = ["std"]
+std = ["serde/std", "serde_cbor/std"]
