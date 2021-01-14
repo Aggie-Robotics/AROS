@@ -33,7 +33,6 @@ pub trait Identifiable: 'static + Serialize + for<'a> Deserialize<'a> + Any + De
 }
 pub const MANAGEMENT_CHANNEL: ChannelIdType = -1;
 //TODO: Make receive channel creation and receive loop
-//TODO: Add trace logging EVERYWHERE
 /// Connection Process:
 /// 1. MultiplexStream::send_connection on one device, MultiplexStream::receive_connection on the other
 pub struct MultiplexStream<U, S, M, C>
