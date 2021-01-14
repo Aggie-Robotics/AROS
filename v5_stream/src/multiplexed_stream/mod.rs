@@ -2,35 +2,33 @@ use alloc::boxed::Box;
 use alloc::format;
 use alloc::vec::Vec;
 use core::any::Any;
-use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
 use core::sync::atomic::Ordering;
 use core::time::Duration;
-
 use atomic::Atomic;
-use serde::{Deserialize, Serialize};
-
 use channel_state::ChannelState;
+use error::MultiplexError::*;
+use error::MultiplexError;
+use link_state::LinkState;
+use management_packet::ManagementPacket;
+use multiplex_packet::MultiplexPacket;
 use v5_traits::{EnsureSend, EnsureSync, LogLevel, UniversalFunctions};
-use v5_traits::error::Error;
 use v5_traits::stream::{DuplexStream, MessageStreamCreator, ReceiveStream, SendStream};
 use v5_traits::sync::Mutex;
 
-use crate::multiplexed_stream::MultiplexError::*;
 use crate::multiplexed_stream::stored_channel::StoredChannel;
+use crate::multiplexed_stream::identifiable::Identifiable;
 
 pub mod channel_state;
+pub mod error;
+pub mod identifiable;
+pub mod link_state;
+mod management_packet;
+pub mod multiplex_packet;
 pub mod stored_channel;
 
 pub type TypeIdType = u8;
 pub type ChannelIdType = i32;
-/// The id of a type to unify the type system
-/// Ids 0-100 are reserved for system use
-pub trait Identifiable: 'static + Serialize + for<'a> Deserialize<'a> + Any + Debug + Send + Sync{
-    type NameType: Display;
-    const ID: TypeIdType;
-    const NAME: Self::NameType;
-}
 pub const MANAGEMENT_CHANNEL: ChannelIdType = -1;
 //TODO: Make receive channel creation and receive loop
 /// Connection Process:
@@ -250,56 +248,3 @@ impl<U, S, M, C> EnsureSync for MultiplexStream<U, S, M, C>
           S: DuplexStream<MultiplexPacket> + Send + Sync,
           M: Mutex<Option<(C::Sender, C::Receiver)>>,
           C: MessageStreamCreator<Box<dyn Any + Send>> + Send + Sync{}
-
-
-#[derive(Copy, Clone, Debug)]
-pub enum LinkState{
-    NotConnected,
-    Connecting,
-    Connected,
-    ConnectionBroken,
-}
-
-#[derive(Debug)]
-pub enum MultiplexError<S> where S: DuplexStream<MultiplexPacket>{
-    SendStreamError(<S as SendStream<MultiplexPacket>>::Error),
-    ReceiveStreamError(<S as ReceiveStream<MultiplexPacket>>::Error),
-    SerdeCborError(serde_cbor::Error),
-    ManagementChannelNotOpen,
-    TriedToConnectInWrongLinkState(LinkState),
-    ChannelNotOpened(ChannelIdType),
-    ChannelOutOfBounds(ChannelIdType),
-    WrongTypeForChannel{ channel_type_id: TypeIdType, packet_type_id: TypeIdType },
-    ChannelAlreadyOpened{ channel_id: ChannelIdType, type_id: TypeIdType },
-    NoPartnerStreams(ChannelIdType),
-}
-impl<S> Error for MultiplexError<S> where S: DuplexStream<MultiplexPacket> + Debug{}
-impl<S> From<serde_cbor::Error> for MultiplexError<S> where S: DuplexStream<MultiplexPacket>{
-    fn from(from: serde_cbor::Error) -> Self {
-        Self::SerdeCborError(from)
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MultiplexPacket{
-    channel_id: ChannelIdType,
-    type_id: TypeIdType,
-    packet_data: Vec<u8>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-enum ManagementPacket{
-    Connect,
-    ConnectionReceived,
-    BreakConnection,
-    BadPacket,
-    CreateChannel(ChannelIdType),
-    ChannelCreated(ChannelIdType),
-    ChannelAlreadyMade(ChannelIdType),
-    ChannelOutOfBounds(ChannelIdType),
-}
-impl Identifiable for ManagementPacket{
-    type NameType = &'static str;
-    const ID: TypeIdType = 0;
-    const NAME: Self::NameType = "ManagementPacket";
-}

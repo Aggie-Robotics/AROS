@@ -1,21 +1,28 @@
 use alloc::boxed::Box;
-use atomic::Atomic;
+use alloc::vec::Vec;
 use core::any::Any;
 use core::default::Default;
-use core::marker::{Send, PhantomData};
+use core::fmt::Debug;
+use core::marker::{PhantomData, Send};
 use core::option::Option;
 use core::option::Option::None;
 use core::sync::atomic::Ordering;
-use v5_traits::stream::{MessageStreamCreator, DuplexStream, SendStream, ReceiveStream};
-use v5_traits::sync::{Mutex, SyncCell};
-use crate::multiplexed_stream::channel_state::ChannelState;
-use crate::multiplexed_stream::{MultiplexError, MultiplexPacket, Identifiable, TypeIdType, MultiplexStream, ChannelIdType, ManagementPacket};
-use crate::multiplexed_stream::MultiplexError::{ChannelAlreadyOpened, WrongTypeForChannel};
-use v5_traits::UniversalFunctions;
+
+use atomic::Atomic;
+
 use v5_traits::error::Error;
-use core::fmt::Debug;
-use alloc::vec::Vec;
+use v5_traits::stream::{DuplexStream, MessageStreamCreator, ReceiveStream, SendStream};
+use v5_traits::sync::{Mutex, SyncCell};
+use v5_traits::UniversalFunctions;
+
+use crate::multiplexed_stream::{ChannelIdType, MultiplexStream, TypeIdType};
+use crate::multiplexed_stream::channel_state::ChannelState;
+use crate::multiplexed_stream::error::MultiplexError::{ChannelAlreadyOpened, WrongTypeForChannel};
+use crate::multiplexed_stream::error::MultiplexError;
+use crate::multiplexed_stream::management_packet::ManagementPacket;
+use crate::multiplexed_stream::multiplex_packet::MultiplexPacket;
 use crate::multiplexed_stream::stored_channel::ClientError::DowncastError;
+use crate::multiplexed_stream::identifiable::Identifiable;
 
 pub struct StoredChannel<M, C>
     where M: Mutex<Option<(C::Sender, C::Receiver)>>,
