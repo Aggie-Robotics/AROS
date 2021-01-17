@@ -46,7 +46,7 @@ pub fn create_super_stream<UF, S, C>(uf: UF, stream: S, creator: &C, num_channel
     )
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod test{
     use crate::create_super_stream;
     use v5_traits::{UniversalFunctions, LogLevel, NamedUniversal};
