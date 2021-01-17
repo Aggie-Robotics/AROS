@@ -1,20 +1,20 @@
-use v5_traits::{UniversalFunctions, EnsureSync, EnsureSend, LogLevel};
-use v5_traits::stream::{DuplexStream, MessageStreamCreator, ReceiveStream, SendStream};
-use alloc::vec::Vec;
-use v5_traits::sync::SyncCell;
-use serde::{Serialize, Deserialize};
-use crate::composed_stream::ComposedStream;
-use core::marker::PhantomData;
 use alloc::boxed::Box;
 use alloc::format;
+use alloc::vec::Vec;
+use core::marker::PhantomData;
 use core::time::Duration;
-use v5_traits::error::Error;
 
-pub type IdentifiableIDType = u64;
+use serde::{Deserialize, Serialize};
+
+use v5_traits::{EnsureSend, EnsureSync, LogLevel, UniversalFunctions};
+use v5_traits::error::Error;
+use v5_traits::stream::{DuplexStream, MessageStreamCreator, ReceiveStream, SendStream};
+use v5_traits::sync::SyncCell;
+
+use crate::composed_stream::ComposedStream;
+use crate::identifiable::{Identifiable, IdentifiableIDType};
+
 pub type ChannelIndexType = u64;
-pub trait Identifiable: 'static + Send + Serialize + for<'de> Deserialize<'de>{
-    const ID: IdentifiableIDType;
-}
 
 pub struct MultiplexedStream<UF, S, C>
     where UF: UniversalFunctions,

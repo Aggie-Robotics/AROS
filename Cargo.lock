@@ -208,6 +208,7 @@ dependencies = [
 name = "v5_stream"
 version = "0.1.0"
 dependencies = [
+ "ansi_rgb",
  "atomic",
  "serde",
  "serde_cbor",

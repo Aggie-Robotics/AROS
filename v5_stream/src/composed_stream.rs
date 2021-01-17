@@ -5,17 +5,17 @@ use v5_traits::stream::{DuplexStream, ReceiveStream, SendStream};
 use alloc::vec::Vec;
 
 #[derive(Debug)]
-pub struct ComposedStream<T, S, R> where T: Send, S: SendStream<T>, R: ReceiveStream<T>{
+pub struct ComposedStream<T, S, R> where T: 'static + Send, S: SendStream<T>, R: ReceiveStream<T>{
     pub send_stream: S,
     pub receive_stream: R,
     phantom_t: PhantomData<T>,
 }
-impl<T, S, R> ComposedStream<T, S, R> where T: Send, S: SendStream<T>, R: ReceiveStream<T>{
+impl<T, S, R> ComposedStream<T, S, R> where T: 'static + Send, S: SendStream<T>, R: ReceiveStream<T>{
     pub fn new(send_stream: S, receive_stream: R) -> Self{
         Self{ send_stream, receive_stream, phantom_t: Default::default() }
     }
 }
-impl<T, S, R> SendStream<T> for ComposedStream<T, S, R> where T: Send, S: SendStream<T>, R: ReceiveStream<T>{
+impl<T, S, R> SendStream<T> for ComposedStream<T, S, R> where T: 'static + Send, S: SendStream<T>, R: ReceiveStream<T>{
     type Error = S::Error;
 
     fn send(&self, val: T) -> Result<(), Self::Error> {

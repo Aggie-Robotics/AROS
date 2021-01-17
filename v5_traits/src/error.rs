@@ -56,3 +56,9 @@ impl<E1, E2> From<E1> for ComboError<E1, E2> where E1: Error, E2: Error{
         Self::Error1(from)
     }
 }
+
+impl Error for (){
+    fn is_recoverable(&self) -> bool {
+        true
+    }
+}

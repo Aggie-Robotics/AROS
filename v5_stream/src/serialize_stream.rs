@@ -8,7 +8,7 @@ use alloc::format;
 
 pub struct SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
-          T: Send + Serialize + for<'de> Deserialize<'de>,
+          T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
           S: DuplexStream<Vec<u8>>{
     uf: UF,
     stream: S,
@@ -16,7 +16,7 @@ pub struct SerializeStream<UF, T, S>
 }
 impl<UF, T, S> SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
-          T: Send + Serialize + for<'de> Deserialize<'de>,
+          T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
           S: DuplexStream<Vec<u8>>{
     pub fn new(uf: UF, stream: S) -> Self{
         Self{ uf, stream, phantom_t: Default::default() }
@@ -25,11 +25,11 @@ impl<UF, T, S> SerializeStream<UF, T, S>
 /// This ensures that this is sync if possible because no T is actually stored
 unsafe impl<UF, T, S> Sync for SerializeStream<UF, T, S>
     where UF: UniversalFunctions + Sync,
-          T: Send + Serialize + for<'de> Deserialize<'de>,
+          T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
           S: DuplexStream<Vec<u8>> + Sync{}
 impl<UF, T, S> SendStream<T> for SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
-          T: Send + Serialize + for<'de> Deserialize<'de>,
+          T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
           S: DuplexStream<Vec<u8>>{
     type Error = SerializeStreamError<<S as SendStream<Vec<u8>>>::Error>;
 
@@ -45,7 +45,7 @@ impl<UF, T, S> SendStream<T> for SerializeStream<UF, T, S>
 }
 impl<UF, T, S> ReceiveStream<T> for SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
-          T: Send + Serialize + for<'de> Deserialize<'de>,
+          T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
           S: DuplexStream<Vec<u8>>{
     type Error = SerializeStreamError<<S as ReceiveStream<Vec<u8>>>::Error>;
 
@@ -67,7 +67,7 @@ impl<UF, T, S> ReceiveStream<T> for SerializeStream<UF, T, S>
 }
 impl<UF, T, S> DuplexStream<T> for SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
-          T: Send + Serialize + for<'de> Deserialize<'de>,
+          T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
           S: DuplexStream<Vec<u8>>{
 
 }
