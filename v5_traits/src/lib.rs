@@ -19,7 +19,7 @@ pub mod task;
 pub trait EnsureSend: Send{}
 pub trait EnsureSync: Sync{}
 
-pub trait UniversalFunctions: Debug + Send + Sync{
+pub trait UniversalFunctions: Clone + Debug + Send + Sync{
 
     /// Delays the current thread for duration
     fn delay(&self, duration: Duration);
@@ -42,6 +42,24 @@ pub trait UniversalFunctions: Debug + Send + Sync{
         if self.min_log_level() >= level{
             self.log_intern(message(), level);
         }
+    }
+    fn log_fatal<T>(&self, message: impl FnOnce() -> T) where T: Display{
+        self.log(message, LogLevel::FATAL);
+    }
+    fn log_error<T>(&self, message: impl FnOnce() -> T) where T: Display{
+        self.log(message, LogLevel::ERROR);
+    }
+    fn log_warn<T>(&self, message: impl FnOnce() -> T) where T: Display{
+        self.log(message, LogLevel::WARN)
+    }
+    fn log_debug<T>(&self, message: impl FnOnce() -> T) where T: Display{
+        self.log(message, LogLevel::DEBUG);
+    }
+    fn log_info<T>(&self, message: impl FnOnce() -> T) where T: Display{
+        self.log(message, LogLevel::INFO)
+    }
+    fn log_trace<T>(&self, message: impl FnOnce() -> T) where T: Display{
+        self.log(message, LogLevel::TRACE)
     }
 }
 impl<U> UniversalFunctions for Arc<U> where U: UniversalFunctions{
@@ -87,12 +105,13 @@ impl<U> UniversalFunctions for Arc<U> where U: UniversalFunctions{
 pub enum LogLevel{
     FATAL = 10,
     ERROR = 20,
-    DEBUG = 30,
-    INFO  = 40,
-    TRACE = 50,
+    WARN  = 30,
+    DEBUG = 40,
+    INFO  = 50,
+    TRACE = 60,
 }
 
-pub trait FormattedUniversal: Debug + Send + Sync{
+pub trait FormattedUniversal: Clone + Debug + Send + Sync{
     type U: UniversalFunctions;
     type D: Display;
 
@@ -133,14 +152,14 @@ impl<T> UniversalFunctions for T where T: FormattedUniversal{
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NamedUniversal<U> where U: UniversalFunctions{
     functions: U,
     name: String,
 }
 impl<U> NamedUniversal<U> where U: UniversalFunctions{
-    pub fn new(functions: U, name: String) -> Self{
-        Self{ functions, name }
+    pub fn new(functions: U, name: impl Display) -> Self{
+        Self{ functions, name: format!("{}", name) }
     }
 }
 impl<U> FormattedUniversal for NamedUniversal<U> where U: UniversalFunctions{
@@ -156,7 +175,7 @@ impl<U> FormattedUniversal for NamedUniversal<U> where U: UniversalFunctions{
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TimedUniversal<U> where U: UniversalFunctions{
     functions: U,
 }
