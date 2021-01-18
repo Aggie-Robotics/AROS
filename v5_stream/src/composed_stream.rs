@@ -1,8 +1,10 @@
 use core::fmt::Debug;
 use core::marker::PhantomData;
 
-use v5_traits::stream::{DuplexStream, ReceiveStream, SendStream};
+use v5_traits::stream::*;
 use alloc::vec::Vec;
+use core::time::Duration;
+use v5_traits::UniversalFunctions;
 
 #[derive(Debug)]
 pub struct ComposedStream<T, S, R> where T: 'static + Send, S: SendStream<T>, R: ReceiveStream<T>{
@@ -30,6 +32,19 @@ impl<T, S, R> SendStream<T> for ComposedStream<T, S, R> where T: 'static + Send,
         self.send_stream.send_vec(data)
     }
 }
+impl<T, S, R> SendTimeoutStream<T> for ComposedStream<T, S, R> where T: 'static + Send, S: SendTimeoutStream<T>, R: ReceiveStream<T>{
+    fn send_timeout(&self, val: T, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
+        self.send_stream.send_timeout(val, timeout, uf)
+    }
+
+    fn send_slice_timeout(&self, slice: &[T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<usize, Self::Error> where T: Copy {
+        self.send_stream.send_slice_timeout(slice, timeout, uf)
+    }
+
+    fn send_vec_timeout(&self, data: Vec<T>, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<Vec<T>>, Self::Error> {
+        self.send_stream.send_vec_timeout(data, timeout, uf)
+    }
+}
 impl<T, S, R> ReceiveStream<T> for ComposedStream<T, S, R> where T: Send, S: SendStream<T>, R: ReceiveStream<T>{
     type Error = R::Error;
 
@@ -53,4 +68,22 @@ impl<T, S, R> ReceiveStream<T> for ComposedStream<T, S, R> where T: Send, S: Sen
         self.receive_stream.receive_vec(limit)
     }
 }
+impl<T, S, R> ReceiveTimoutStream<T> for ComposedStream<T, S, R> where T: Send, S: SendStream<T>, R: ReceiveTimoutStream<T>{
+    fn receive_timeout(&self, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
+        self.receive_stream.receive_timeout(timeout, uf)
+    }
+
+    fn receive_slice_timeout(&self, buffer: &mut [T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<usize, Self::Error> {
+        self.receive_stream.receive_slice_timeout(buffer, timeout, uf)
+    }
+
+    fn receive_all_timeout(&self, buffer: &mut [T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<bool, Self::Error> {
+        self.receive_stream.receive_all_timeout(buffer, timeout, uf)
+    }
+
+    fn receive_vec_timeout(&self, limit: usize, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Vec<T>, Self::Error> {
+        self.receive_stream.receive_vec_timeout(limit, timeout, uf)
+    }
+}
 impl<T, S, R> DuplexStream<T> for ComposedStream<T, S, R> where T: Send, S: SendStream<T>, R: ReceiveStream<T>{}
+impl<T, S, R> DuplexTimeoutStream<T> for ComposedStream<T, S, R> where T: Send, S: SendTimeoutStream<T>, R: ReceiveTimoutStream<T>{}

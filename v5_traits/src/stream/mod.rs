@@ -7,6 +7,8 @@ use core::fmt::Debug;
 use core::time::Duration;
 use alloc::sync::Arc;
 use core::ops::Deref;
+use crate::UniversalFunctions;
+use core::iter::once;
 
 pub trait SendStream<T> where T: 'static + Send{
     type Error: Error + Debug;
@@ -41,21 +43,53 @@ impl<T, S> SendStream<T> for Arc<S> where T: 'static + Send, S: SendStream<T>{
     }
 }
 pub trait SendTimeoutStream<T>: SendStream<T> where T: 'static + Send{
-    fn send_timeout(&self, val: T, timeout: Duration) -> Result<T, Self::Error>;
-    fn send_slice_timeout(&self, slice: &[T], timeout: Duration) -> Result<usize, Self::Error> where T: Copy;
-    fn send_vec_timeout(&self, data: Vec<T>, timeout: Duration) -> Result<Option<Vec<T>>, Self::Error>;
+    fn send_timeout(&self, val: T, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error>;
+    fn send_slice_timeout(&self, slice: &[T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<usize, Self::Error> where T: Copy{
+        let end_time = uf.system_time() + timeout;
+        let mut sent = 0;
+        while end_time > uf.system_time() && sent < slice.len(){
+            if let Some(_) = self.send_timeout(slice[sent], end_time - uf.system_time(), uf)?{
+                return Ok(sent);
+            }
+            sent += 1;
+        }
+        Ok(sent)
+    }
+    ///Returns true if whole vec was sent, otherwise false
+    fn send_vec_timeout(&self, data: Vec<T>, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<Vec<T>>, Self::Error>{
+        let end_time = uf.system_time() + timeout;
+        let mut sent = 0;
+        let length = data.len();
+        let mut val_iter = data.into_iter();
+        while end_time > uf.system_time() && sent < length{
+            let val = val_iter.next().unwrap();
+            match self.send_timeout(val, end_time - uf.system_time(), uf){
+                Ok(receive) => if let Some(receive) = receive{
+                    return Ok(Some(once(receive).chain(val_iter).collect()));
+                },
+                Err(error) => return Err(error),
+            }
+            sent += 1;
+        }
+        if sent == length{
+            Ok(None)
+        }
+        else{
+            Ok(Some(val_iter.collect()))
+        }
+    }
 }
 impl<T, S> SendTimeoutStream<T> for Arc<S> where T: 'static + Send, S: SendTimeoutStream<T>{
-    fn send_timeout(&self, val: T, timeout: Duration) -> Result<T, Self::Error> {
-        self.deref().send_timeout(val, timeout)
+    fn send_timeout(&self, val: T, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
+        self.deref().send_timeout(val, timeout, uf)
     }
 
-    fn send_slice_timeout(&self, slice: &[T], timeout: Duration) -> Result<usize, Self::Error> where T: Copy {
-        self.deref().send_slice_timeout(slice, timeout)
+    fn send_slice_timeout(&self, slice: &[T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<usize, Self::Error> where T: Copy {
+        self.deref().send_slice_timeout(slice, timeout, uf)
     }
 
-    fn send_vec_timeout(&self, data: Vec<T>, timeout: Duration) -> Result<Option<Vec<T>>, Self::Error> {
-        self.deref().send_vec_timeout(data, timeout)
+    fn send_vec_timeout(&self, data: Vec<T>, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<Vec<T>>, Self::Error> {
+        self.deref().send_vec_timeout(data, timeout, uf)
     }
 }
 
@@ -119,21 +153,57 @@ impl<T, S> ReceiveStream<T> for Arc<S> where T: 'static + Send, S: ReceiveStream
     }
 }
 pub trait ReceiveTimoutStream<T>: ReceiveStream<T> where T: Send{
-    fn receive_timeout(&self, timeout: Duration) -> Result<Option<T>, Self::Error>;
-    fn receive_slice_timeout(&self, buffer: &mut [T], timeout: Duration) -> Result<usize, Self::Error>;
-    fn receive_vec_timeout(&self, limit: usize, timeout: Duration) -> Result<Vec<T>, Self::Error>;
+    fn receive_timeout(&self, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error>;
+    fn receive_slice_timeout(&self, buffer: &mut [T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<usize, Self::Error>{
+        let end_time = uf.system_time() + timeout;
+        let mut received = 0;
+        while end_time > uf.system_time() && received < buffer.len(){
+            match self.receive_timeout(end_time - uf.system_time(), uf)?{
+                None => break,
+                Some(value) => {
+                    buffer[received] = value;
+                    received += 1;
+                }
+            }
+        }
+        Ok(received)
+    }
+    /// Returns true if received, false if timed out
+    fn receive_all_timeout(&self, buffer: &mut [T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<bool, Self::Error>{
+        let mut found = 0;
+        let end_time = uf.system_time() + timeout;
+        while uf.system_time() < end_time && found < buffer.len(){
+            found += self.receive_slice_timeout(&mut buffer[found..], end_time - uf.system_time(), uf)?;
+        }
+        Ok(found == buffer.len())
+    }
+    fn receive_vec_timeout(&self, limit: usize, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Vec<T>, Self::Error>{
+        let end_time = uf.system_time() + timeout;
+        let mut out = Vec::with_capacity(limit);
+        while uf.system_time() < end_time && out.len() < limit{
+            match self.receive_timeout(end_time - uf.system_time(), uf)?{
+                None => break,
+                Some(value) => out.push(value),
+            }
+        }
+        Ok(out)
+    }
 }
 impl<T, S> ReceiveTimoutStream<T> for Arc<S> where T: 'static + Send, S: ReceiveTimoutStream<T>{
-    fn receive_timeout(&self, timeout: Duration) -> Result<Option<T>, Self::Error> {
-        self.deref().receive_timeout(timeout)
+    fn receive_timeout(&self, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
+        self.deref().receive_timeout(timeout, uf)
     }
 
-    fn receive_slice_timeout(&self, buffer: &mut [T], timeout: Duration) -> Result<usize, Self::Error> {
-        self.deref().receive_slice_timeout(buffer, timeout)
+    fn receive_slice_timeout(&self, buffer: &mut [T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<usize, Self::Error> {
+        self.deref().receive_slice_timeout(buffer, timeout, uf)
     }
 
-    fn receive_vec_timeout(&self, limit: usize, timeout: Duration) -> Result<Vec<T>, Self::Error> {
-        self.deref().receive_vec_timeout(limit, timeout)
+    fn receive_all_timeout(&self, buffer: &mut [T], timeout: Duration, uf: &impl UniversalFunctions) -> Result<bool, Self::Error> {
+        self.deref().receive_all_timeout(buffer, timeout, uf)
+    }
+
+    fn receive_vec_timeout(&self, limit: usize, timeout: Duration, uf: &impl UniversalFunctions) -> Result<Vec<T>, Self::Error> {
+        self.deref().receive_vec_timeout(limit, timeout, uf)
     }
 }
 

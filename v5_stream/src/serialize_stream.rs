@@ -21,6 +21,10 @@ impl<UF, T, S> SerializeStream<UF, T, S>
     pub fn new(uf: UF, stream: S) -> Self{
         Self{ uf, stream, phantom_t: Default::default() }
     }
+
+    pub fn stream(&self) -> &S where S: Sync{
+        &self.stream
+    }
 }
 /// This ensures that this is sync if possible because no T is actually stored
 unsafe impl<UF, T, S> Sync for SerializeStream<UF, T, S>

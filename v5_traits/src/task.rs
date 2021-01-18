@@ -1,8 +1,7 @@
-pub trait TaskArgument: 'static + Send{}
-impl<T> TaskArgument for T where T: 'static + Send{}
-pub trait TaskFunction<T>: 'static + FnOnce(T) + Send{}
-impl<T, U> TaskFunction<T> for U where T: TaskArgument, U: 'static + FnOnce(T) + Send{}
+pub trait TaskFunction<T, O>: 'static + FnOnce(T) -> O + Send where T: 'static + Send, O: 'static + Send{}
+impl<T, U, O> TaskFunction<T, O> for U where T: 'static + Send, U: 'static + FnOnce(T) -> O + Send, O: 'static + Send{}
 
-pub trait TaskRunner{
-    fn run_task<T>(&self, task: impl TaskFunction<T>, task_argument: T) where T: TaskArgument;
+pub trait TaskRunner<T, O> where T: 'static + Send, O: 'static + Send{
+    type TaskTracker;
+    fn run_task(&self, task: impl TaskFunction<T, O>, task_argument: T) -> Self::TaskTracker;
 }

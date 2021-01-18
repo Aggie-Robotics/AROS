@@ -11,10 +11,11 @@ v5_traits = { path = "../v5_traits", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"]}
 serde_cbor = { version = "0.11", default-features = false, features = ["alloc"] }
 atomic = { version = "0.5", default-features = false }
+crc = { version = "1.8", default-features = false }
 
 [dev-dependencies]
 ansi_rgb = "0.2"
 
 [features]
 defalut = ["std"]
-std = ["serde/std", "serde_cbor/std", "v5_traits/std"]
+std = ["serde/std", "serde_cbor/std", "v5_traits/std", "crc/std"]

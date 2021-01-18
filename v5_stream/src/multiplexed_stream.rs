@@ -36,6 +36,10 @@ impl<UF, S, C> MultiplexedStream<UF, S, C>
         Self{ uf, stream, channels }
     }
 
+    pub fn stream(&self) -> &S where S: Sync{
+        &self.stream
+    }
+
     pub fn num_channels(&self) -> ChannelIndexType{
         self.channels.len() as ChannelIndexType
     }
@@ -98,9 +102,7 @@ impl<UF, S, C> MultiplexedStream<UF, S, C>
 impl<UF, S, C> EnsureSend for MultiplexedStream<UF, S, C>
     where UF: UniversalFunctions + Send,
           S: DuplexStream<MultiplexPacket> + Send,
-          C: MessageStreamCreator<DataPacket>{
-
-}
+          C: MessageStreamCreator<DataPacket>{}
 impl<UF, S, C> EnsureSync for MultiplexedStream<UF, S, C>
     where UF: UniversalFunctions + Sync,
           S: DuplexStream<MultiplexPacket> + Sync,
