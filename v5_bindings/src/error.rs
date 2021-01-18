@@ -1,5 +1,5 @@
 use alloc::string::String;
-use core::fmt::Debug;
+use core::fmt::{Debug, Display};
 
 #[derive(Debug)]
 pub struct Error {
@@ -13,10 +13,10 @@ pub struct NumericError<T> {
 }
 
 impl<T> NumericError<T> {
-    pub const fn new(value: T, name: String) -> Self {
+    pub fn new(value: T, name: impl Display) -> Self {
         Self {
             value,
-            name,
+            name: format!("{}", name),
         }
     }
 }

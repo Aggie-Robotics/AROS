@@ -112,17 +112,15 @@ pub trait ReceiveStream<T> where T: Send{
         Ok(())
     }
     fn receive_vec(&self, limit: usize) -> Result<Vec<T>, Self::Error>{
-        let mut out = Vec::with_capacity(limit);
-        self.receive_whole_vec(&mut out, limit)?;
-        Ok(out)
+        self.receive_whole_vec(limit)
     }
     /// Appends to vec
-    fn receive_whole_vec(&self, vec: &mut Vec<T>, limit: usize) -> Result<(), Self::Error>{
-        let start_size = vec.len();
-        while vec.len() < start_size + limit{
-            vec.push(self.receive()?)
+    fn receive_whole_vec(&self, limit: usize) -> Result<Vec<T>, Self::Error>{
+        let mut out = Vec::with_capacity(limit);
+        while out.len() < limit{
+            out.push(self.receive()?)
         }
-        Ok(())
+        Ok(out)
     }
 }
 impl<T, S> ReceiveStream<T> for Arc<S> where T: 'static + Send, S: ReceiveStream<T>{
@@ -148,8 +146,8 @@ impl<T, S> ReceiveStream<T> for Arc<S> where T: 'static + Send, S: ReceiveStream
         self.deref().receive_vec(limit)
     }
 
-    fn receive_whole_vec(&self, vec: &mut Vec<T>, limit: usize) -> Result<(), Self::Error> {
-        self.deref().receive_whole_vec(vec, limit)
+    fn receive_whole_vec(&self, limit: usize) -> Result<Vec<T>, Self::Error> {
+        self.deref().receive_whole_vec(limit)
     }
 }
 pub trait ReceiveTimoutStream<T>: ReceiveStream<T> where T: Send{

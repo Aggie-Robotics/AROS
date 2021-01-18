@@ -66,7 +66,7 @@ impl<UF, T, S> ReceiveStream<T> for SplitReceiver<UF, T, S> where UF: UniversalF
         self.stream.receive_vec(limit)
     }
 
-    fn receive_whole_vec(&self, vec: &mut Vec<T>, limit: usize) -> Result<(), Self::Error> {
-        self.stream.receive_whole_vec(vec, limit)
+    fn receive_whole_vec(&self, limit: usize) -> Result<Vec<T>, Self::Error> {
+        self.stream.receive_whole_vec(limit)
     }
 }

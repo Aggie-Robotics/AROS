@@ -1,7 +1,8 @@
+pub mod controller;
 pub mod motor;
 pub mod port;
+pub mod serial;
 pub mod vision;
-pub mod controller;
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;

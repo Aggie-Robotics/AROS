@@ -30,7 +30,8 @@ mod export_functions;
 pub mod error;
 pub mod percent;
 pub mod task;
-pub mod usb_serial;
+// Doesn't work
+// pub mod usb_serial;
 pub mod user_functions;
 pub mod util;
 

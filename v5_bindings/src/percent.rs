@@ -1,4 +1,3 @@
-use alloc::string::String;
 use core::convert::TryFrom;
 
 use crate::error::NumericError;
@@ -10,7 +9,7 @@ pub struct Percent {
 impl Percent {
     pub fn new(value: u8) -> Result<Self, NumericError<u8>> {
         if value > 100 {
-            Err(NumericError::new(value, String::from("Percent")))
+            Err(NumericError::new(value, "Percent"))
         } else {
             Ok(Self {
                 value

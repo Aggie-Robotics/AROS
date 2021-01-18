@@ -159,8 +159,8 @@ impl<UF, S, C> ReceiveStream<Vec<u8>> for ChecksumByteStream<UF, S, C> where UF:
         self.inbound_stream.1.receive_vec(limit)
     }
 
-    fn receive_whole_vec(&self, vec: &mut Vec<Vec<u8>>, limit: usize) -> Result<(), Self::Error> {
-        self.inbound_stream.1.receive_whole_vec(vec, limit)
+    fn receive_whole_vec(&self, limit: usize) -> Result<Vec<Vec<u8>>, Self::Error> {
+        self.inbound_stream.1.receive_whole_vec(limit)
     }
 }
 impl<UF, S, C> DuplexStream<Vec<u8>> for ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<u8>, C: MessageStreamCreator<Vec<u8>>{}
