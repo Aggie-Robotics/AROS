@@ -4,6 +4,10 @@ use core::mem::{size_of, forget, MaybeUninit};
 use core::time::Duration;
 use cty::c_void;
 use crate::sync::option_to_timeout;
+use v5_traits::stream::{SendStream, SendTimeoutStream, ReceiveStream, ReceiveTimoutStream, DuplexStream, DuplexTimeoutStream, MessageStreamCreator};
+use v5_traits::error::CustomError;
+use v5_traits::UniversalFunctions;
+use alloc::sync::Arc;
 
 /// A queue that allows the sending of data across thread boundaries
 /// Sends data of type T
@@ -98,6 +102,70 @@ impl<T> Drop for Queue<T> where T: 'static + Send{
 }
 unsafe impl<T> Send for Queue<T> where T: 'static + Send{}
 unsafe impl<T> Sync for Queue<T> where T: 'static + Send{}
+impl<T> SendStream<T> for Queue<T> where T: 'static + Send{
+    type Error = ();
+
+    fn send(&self, val: T) -> Result<(), Self::Error> {
+        if let Err(_) = self.append(val, None){
+            Err(())
+        }
+        else{
+            Ok(())
+        }
+    }
+}
+impl<T> SendTimeoutStream<T> for Queue<T> where T: 'static + Send{
+    fn send_timeout(&self, val: T, timeout: Duration, _uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
+        match self.append(val, Some(timeout)){
+            Ok(_) => Ok(None),
+            Err(error) => Ok(Some(error))
+        }
+    }
+}
+impl<T> ReceiveStream<T> for Queue<T> where T: 'static + Send{
+    type Error = CustomError;
+
+    fn try_receive(&self) -> Result<Option<T>, Self::Error> {
+        Ok(self.receive(Some(Duration::new(0, 0))))
+    }
+
+    fn receive(&self) -> Result<T, Self::Error> {
+        match self.receive(None){
+            None => Err(CustomError::new(true, "Queue returned non wit hno timeout")),
+            Some(val) => Ok(val),
+        }
+    }
+}
+impl<T> ReceiveTimoutStream<T> for Queue<T> where T: 'static + Send{
+    fn receive_timeout(&self, timeout: Duration, _uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
+        Ok(self.receive(Some(timeout)))
+    }
+}
+impl<T> DuplexStream<T> for Queue<T> where T: 'static + Send{}
+impl<T> DuplexTimeoutStream<T> for Queue<T> where T: 'static + Send{}
+
+#[derive(Copy, Clone, Debug)]
+pub struct QueueCreator1k();
+impl<T> MessageStreamCreator<T> for QueueCreator1k where T: 'static + Send{
+    type Sender = Arc<Queue<T>>;
+    type Receiver = Arc<Queue<T>>;
+
+    fn create_stream(&self) -> (Self::Sender, Self::Receiver) {
+        let queue = Arc::new(Queue::new(1 << 10 / size_of::<T>() + 1));
+        (queue.clone(), queue)
+    }
+}
+#[derive(Copy, Clone, Debug)]
+pub struct QueueCreator16k();
+impl<T> MessageStreamCreator<T> for QueueCreator16k where T: 'static + Send{
+    type Sender = Arc<Queue<T>>;
+    type Receiver = Arc<Queue<T>>;
+
+    fn create_stream(&self) -> (Self::Sender, Self::Receiver) {
+        let queue = Arc::new(Queue::new(1 << 14 / size_of::<T>() + 1));
+        (queue.clone(), queue)
+    }
+}
 
 #[cfg(feature = "v5_test")]
 pub mod test{

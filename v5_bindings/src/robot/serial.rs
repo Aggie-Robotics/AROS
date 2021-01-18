@@ -2,7 +2,6 @@ use crate::robot::port::Port;
 use crate::raw::vex_os::api::*;
 use v5_traits::stream::{SendStream, ReceiveStream};
 use alloc::vec::Vec;
-use v5_traits::error::Error;
 
 pub struct Serial{
     port: Port,
@@ -18,7 +17,7 @@ impl Serial{
     }
 }
 impl SendStream<u8> for Serial{
-    type Error = SerialError;
+    type Error = ();
 
     fn send(&self, val: u8) -> Result<(), Self::Error> {
         self.send_slice(&[val])
@@ -37,7 +36,7 @@ impl SendStream<u8> for Serial{
     }
 }
 impl ReceiveStream<u8> for Serial{
-    type Error = SerialError;
+    type Error = ();
 
     fn try_receive(&self) -> Result<Option<u8>, Self::Error> {
         if unsafe{ vexDeviceGenericSerialReceiveAvail(self.port.device()) } > 0{
@@ -78,14 +77,4 @@ pub enum BaudRate{
     B38400 = 38400,
     B57600 = 57600,
     B115200 = 115200,
-}
-
-#[derive(Debug)]
-pub enum SerialError{
-    GenericError(i32),
-}
-impl Error for SerialError{
-    fn is_recoverable(&self) -> bool {
-        true
-    }
 }

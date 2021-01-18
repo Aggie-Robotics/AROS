@@ -15,8 +15,6 @@ use crate::raw::pros::api::printf;
 pub use crate::raw::pros::rtos::notify_action_e_t as NotifyAction;
 pub use crate::raw::pros::rtos::task_state_e_t as State;
 pub use crate::task::Task;
-pub use crate::task::TaskArgument;
-pub use crate::task::TaskFunction;
 
 // use std::sync::Mutex;
 

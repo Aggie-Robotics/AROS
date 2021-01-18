@@ -224,8 +224,8 @@ impl<S, R> Error for DuplexError<S, R> where S: Error, R: Error{
 }
 
 pub trait MessageStreamCreator<T> where T: 'static + Send{
-    type Sender: SendStream<T> + Send + Sync;
-    type Receiver: ReceiveStream<T> + Send + Sync;
+    type Sender: 'static + SendStream<T> + Send + Sync;
+    type Receiver: 'static + ReceiveStream<T> + Send + Sync;
 
     fn create_stream(&self) -> (Self::Sender, Self::Receiver);
     fn create_bidirectional_stream(&self) -> ((Self::Sender, Self::Receiver), (Self::Sender, Self::Receiver)){

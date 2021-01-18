@@ -8,19 +8,16 @@ use cty::*;
 use crate::{NotifyAction, State};
 use crate::raw::pros::rtos::*;
 use crate::raw::str_to_char_ptr;
-
-pub trait TaskArgument: 'static + Send{}
-impl<T> TaskArgument for T where T: 'static + Send{}
-pub trait TaskFunction<T>: 'static + FnOnce(T) + Send{}
-impl<T, U> TaskFunction<T> for U where T: TaskArgument, U: 'static + FnOnce(T) + Send{}
+use v5_traits::task::{TaskFunction, TaskRunner};
+use core::fmt::Display;
 
 pub struct Task{
     task: task_t,
 }
 impl Task{
-    pub fn new<F, T>(priority: Option<u32>, stack_depth: Option<u16>, name: &str, function: F, arg: T) -> Self
-        where F: TaskFunction<T>,
-              T: TaskArgument{
+    pub fn new<F, T>(priority: Option<u32>, stack_depth: Option<u16>, name: impl Display, function: F, arg: T) -> Self
+        where F: TaskFunction<T, ()>,
+              T: 'static + Send{
         let task_arg = Box::new(TaskArg{ function, arg });
         let parameters = (Box::leak(task_arg) as *mut TaskArg<F, T>) as *mut c_void;
         unsafe{Self{
@@ -35,7 +32,7 @@ impl Task{
                     None => TASK_STACK_DEPTH_DEFAULT,
                     Some(stack_depth) => stack_depth,
                 },
-                str_to_char_ptr(name).as_ptr()),
+                str_to_char_ptr(format!("{}", name).as_str()).as_ptr()),
         }}
     }
 
@@ -89,16 +86,28 @@ impl Task{
     }
 }
 impl !Send for Task{}
-struct TaskArg<F: TaskFunction<T>, T: TaskArgument>{
+struct TaskArg<F, T>
+    where F: TaskFunction<T, ()>,
+          T: 'static + Send{
     pub function: F,
     pub arg: T,
 }
 extern "C" fn task_function<F, T>(arg: *mut c_void)
-    where F: TaskFunction<T>,
-          T: TaskArgument{
+    where F: TaskFunction<T, ()>,
+          T: 'static + Send{
     let task_arg;
     unsafe {
         task_arg = Box::from_raw(arg as *mut TaskArg<F, T>);
     }
     (task_arg.function)(task_arg.arg);
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ProsTaskRunner();
+impl<T> TaskRunner<T, ()> for ProsTaskRunner where T: 'static + Send{
+    type TaskTracker = Task;
+
+    fn run_task(&self, name: impl Display, task: impl TaskFunction<T, ()>, task_argument: T) -> Self::TaskTracker {
+        Task::new(None, None, name, task, task_argument)
+    }
 }

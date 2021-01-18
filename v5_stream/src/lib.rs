@@ -64,9 +64,9 @@ pub fn super_stream_management<UF, S, C1, C2, TR>(super_stream: Arc<SuperStream<
     let super_stream_clone1 = super_stream.clone();
     let super_stream_clone2 = super_stream.clone();
     TaskTracker{
-        multiplex_inbound: runner.run_task(move|_|super_stream_clone1.handle_inbound(), ()),
-        multiplex_outbound: runner.run_task(move|_|super_stream_clone2.handle_outbound(multiplex_outbound_delay), ()),
-        byte_stream_management: runner.run_task(move|_|super_stream.stream().stream().management_loop(timeouts), ()),
+        multiplex_inbound: runner.run_task("multiplex_inbound", move|_|super_stream_clone1.handle_inbound(), ()),
+        multiplex_outbound: runner.run_task("multiplex_outbound", move|_|super_stream_clone2.handle_outbound(multiplex_outbound_delay), ()),
+        byte_stream_management: runner.run_task("byte_stream_management", move|_|super_stream.stream().stream().management_loop(timeouts), ()),
     }
 }
 pub struct TaskTracker<T>{
