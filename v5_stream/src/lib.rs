@@ -227,5 +227,3 @@ mod test{
         }
     }
 }
-
-//TODO: Make a binary packet handler

@@ -11,6 +11,7 @@ use atomic::Ordering;
 
 const PACKET_START_BYTES: [u8; 6] = [132, 35, 53, 2, 100, 94];
 
+//TODO: Add packet resending
 #[derive(Debug)]
 pub struct ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<u8>, C: MessageStreamCreator<Vec<u8>>{
     uf: UF,
