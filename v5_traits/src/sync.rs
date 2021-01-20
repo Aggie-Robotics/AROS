@@ -2,6 +2,7 @@ use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{AtomicPtr, Ordering};
 use core::ptr::null_mut;
 use alloc::boxed::Box;
+use core::time::Duration;
 
 pub trait Mutex<T>: Send + Sync where T: Send{
     type Guard: MutexGuard<T>;
@@ -11,6 +12,9 @@ pub trait Mutex<T>: Send + Sync where T: Send{
     fn is_locked(&self) -> bool;
 }
 pub trait MutexGuard<T>: Deref<Target=T> + DerefMut<Target=T> where T: Send{}
+pub trait MutexTimeout<T>: Mutex<T> + Send + Sync where T: Send{
+    fn lock_timeout(&self, timeout: Duration) -> Option<Self::Guard>;
+}
 
 pub struct SyncCell<T>{
     data: AtomicPtr<T>,
