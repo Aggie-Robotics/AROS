@@ -9,7 +9,7 @@ use alloc::format;
 pub struct SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
           T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>>{
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>>{
     uf: UF,
     stream: S,
     phantom_t: PhantomData<T>,
@@ -17,7 +17,7 @@ pub struct SerializeStream<UF, T, S>
 impl<UF, T, S> SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
           T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>>{
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>>{
     pub fn new(uf: UF, stream: S) -> Self{
         Self{ uf, stream, phantom_t: Default::default() }
     }
@@ -30,12 +30,13 @@ impl<UF, T, S> SerializeStream<UF, T, S>
 unsafe impl<UF, T, S> Sync for SerializeStream<UF, T, S>
     where UF: UniversalFunctions + Sync,
           T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>> + Sync{}
-impl<UF, T, S> SendStream<T> for SerializeStream<UF, T, S>
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>> + Sync{}
+impl<UF, T, S> SendStream for SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
           T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>>{
-    type Error = SerializeStreamError<<S as SendStream<Vec<u8>>>::Error>;
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>>{
+    type SData = T;
+    type Error = SerializeStreamError<<S as SendStream>::Error>;
 
     fn send(&self, val: T) -> Result<(), Self::Error> {
         Ok(self.stream.send(match serde_cbor::to_vec(&val){
@@ -47,11 +48,12 @@ impl<UF, T, S> SendStream<T> for SerializeStream<UF, T, S>
         })?)
     }
 }
-impl<UF, T, S> ReceiveStream<T> for SerializeStream<UF, T, S>
+impl<UF, T, S> ReceiveStream for SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
           T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>>{
-    type Error = SerializeStreamError<<S as ReceiveStream<Vec<u8>>>::Error>;
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>>{
+    type RData = T;
+    type Error = SerializeStreamError<<S as ReceiveStream>::Error>;
 
     fn try_receive(&self) -> Result<Option<T>, Self::Error> {
         self.stream.try_receive()?.map_or(Ok(None), |val|{
@@ -69,20 +71,20 @@ impl<UF, T, S> ReceiveStream<T> for SerializeStream<UF, T, S>
         }
     }
 }
-impl<UF, T, S> DuplexStream<T> for SerializeStream<UF, T, S>
+impl<UF, T, S> DuplexStream for SerializeStream<UF, T, S>
     where UF: UniversalFunctions,
           T: 'static + Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>>{
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>>{
 
 }
 impl<UF, T, S> EnsureSync for SerializeStream<UF, T, S>
     where UF: UniversalFunctions + Sync,
           T: Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>> + Sync{}
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>> + Sync{}
 impl<UF, T, S> EnsureSend for SerializeStream<UF, T, S>
     where UF: UniversalFunctions + Send,
           T: Send + Serialize + for<'de> Deserialize<'de>,
-          S: DuplexStream<Vec<u8>> + Send{}
+          S: DuplexStream<SData=Vec<u8>, RData=Vec<u8>> + Send{}
 
 #[derive(Debug)]
 pub enum SerializeStreamError<E> where E: Error{

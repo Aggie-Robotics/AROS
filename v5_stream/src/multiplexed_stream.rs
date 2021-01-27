@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use v5_traits::{EnsureSend, EnsureSync, LogLevel, UniversalFunctions};
 use v5_traits::error::Error;
 use v5_traits::stream::{DuplexStream, MessageStreamCreator, ReceiveStream, SendStream};
-use v5_traits::sync::SyncCell;
+use v5_traits::sync_cell::SyncCell;
 
 use crate::composed_stream::ComposedStream;
 use crate::identifiable::{Identifiable, IdentifiableIDType};
@@ -18,7 +18,7 @@ pub type ChannelIndexType = u64;
 
 pub struct MultiplexedStream<UF, S, C>
     where UF: UniversalFunctions,
-          S: DuplexStream<MultiplexPacket>,
+          S: DuplexStream<SData=MultiplexPacket, RData=MultiplexPacket>,
           C: MessageStreamCreator<DataPacket>{
     uf: UF,
     stream: S,
@@ -26,7 +26,7 @@ pub struct MultiplexedStream<UF, S, C>
 }
 impl<UF, S, C> MultiplexedStream<UF, S, C>
     where UF: UniversalFunctions,
-          S: DuplexStream<MultiplexPacket>,
+          S: DuplexStream<SData=MultiplexPacket, RData=MultiplexPacket>,
           C: MessageStreamCreator<DataPacket>{
     pub fn new(uf: UF, stream: S, creator: &C, num_channels: ChannelIndexType) -> Self{
         let mut channels = Vec::with_capacity(num_channels as usize);
@@ -101,11 +101,11 @@ impl<UF, S, C> MultiplexedStream<UF, S, C>
 }
 impl<UF, S, C> EnsureSend for MultiplexedStream<UF, S, C>
     where UF: UniversalFunctions + Send,
-          S: DuplexStream<MultiplexPacket> + Send,
+          S: DuplexStream<SData=MultiplexPacket, RData=MultiplexPacket> + Send,
           C: MessageStreamCreator<DataPacket>{}
 impl<UF, S, C> EnsureSync for MultiplexedStream<UF, S, C>
     where UF: UniversalFunctions + Sync,
-          S: DuplexStream<MultiplexPacket> + Sync,
+          S: DuplexStream<SData=MultiplexPacket, RData=MultiplexPacket> + Sync,
           C: MessageStreamCreator<DataPacket>{}
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -122,7 +122,7 @@ pub struct DataPacket{
 
 struct Channel<C> where C: MessageStreamCreator<DataPacket>{
     inbound_sender: C::Sender,
-    client_streams: SyncCell<ComposedStream<DataPacket, C::Sender, C::Receiver>>,
+    client_streams: SyncCell<ComposedStream<C::Sender, C::Receiver>>,
     outbound_receiver: C::Receiver,
 }
 impl<C> Channel<C> where C: MessageStreamCreator<DataPacket>{
@@ -143,22 +143,23 @@ pub struct ClientStream<T, C>
     where T: Identifiable + Send,
           C: MessageStreamCreator<DataPacket>{
     channel_id: ChannelIndexType,
-    streams: Box<ComposedStream<DataPacket, C::Sender, C::Receiver>>,
+    streams: Box<ComposedStream<C::Sender, C::Receiver>>,
     phantom_t: PhantomData<T>,
 }
 impl<T, C> ClientStream<T, C>
     where T: Identifiable + Send,
           C: MessageStreamCreator<DataPacket>{
-    fn new(channel_id: ChannelIndexType, streams: Box<ComposedStream<DataPacket, C::Sender, C::Receiver>>) -> Self{
+    fn new(channel_id: ChannelIndexType, streams: Box<ComposedStream<C::Sender, C::Receiver>>) -> Self{
         Self{ channel_id, streams, phantom_t: Default::default() }
     }
 }
-impl<T, C> SendStream<T> for ClientStream<T, C>
+impl<T, C> SendStream for ClientStream<T, C>
     where T: Identifiable + Send,
           C: MessageStreamCreator<DataPacket>{
-    type Error = ClientStreamError<<C::Sender as SendStream<DataPacket>>::Error>;
+    type SData = T;
+    type Error = ClientStreamError<<C::Sender as SendStream>::Error>;
 
-    fn send(&self, val: T) -> Result<(), Self::Error> {
+    fn send(&self, val: Self::SData) -> Result<(), Self::Error> {
         let data = match serde_cbor::to_vec(&val){
             Ok(data) => data,
             Err(error) => return Err(ClientStreamError::SerdeCborError(error)),
@@ -170,10 +171,11 @@ impl<T, C> SendStream<T> for ClientStream<T, C>
         })?)
     }
 }
-impl<T, C> ReceiveStream<T> for ClientStream<T, C>
+impl<T, C> ReceiveStream for ClientStream<T, C>
     where T: Identifiable + Send,
           C: MessageStreamCreator<DataPacket>{
-    type Error = ClientStreamError<<C::Receiver as ReceiveStream<DataPacket>>::Error>;
+    type RData = T;
+    type Error = ClientStreamError<<C::Receiver as ReceiveStream>::Error>;
 
     fn try_receive(&self) -> Result<Option<T>, Self::Error> {
         self.streams.try_receive()?.map_or(Ok(None), |val|{

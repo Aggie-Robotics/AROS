@@ -37,7 +37,7 @@ MultiplexedStream<
 >;
 pub fn create_super_stream<UF, S, C1, C2>(uf: UF, stream: S, creator1: &C1, creator2: &C2, num_channels: ChannelIndexType) -> SuperStream<UF, S, C1, C2>
     where UF: UniversalFunctions + Clone,
-          S: DuplexTimeoutStream<u8>,
+          S: DuplexTimeoutStream<SData=u8, RData=u8>,
           C1: MessageStreamCreator<DataPacket>,
           C2: MessageStreamCreator<Vec<u8>>{
     MultiplexedStream::new(
@@ -57,7 +57,7 @@ pub fn create_super_stream<UF, S, C1, C2>(uf: UF, stream: S, creator1: &C1, crea
 
 pub fn super_stream_management<UF, S, C1, C2, TR>(super_stream: Arc<SuperStream<UF, S, C1, C2>>, multiplex_outbound_delay: Duration, timeouts: ChecksumByteTimeouts, runner: TR) -> TaskTracker<TR::TaskTracker>
     where UF: 'static + UniversalFunctions + Clone,
-          S: 'static + DuplexTimeoutStream<u8> + Send + Sync,
+          S: 'static + DuplexTimeoutStream<SData=u8> + Send + Sync,
           C1: 'static + MessageStreamCreator<DataPacket>,
           C2: 'static + MessageStreamCreator<Vec<u8>>,
           TR: 'static + TaskRunner<(), ()>{

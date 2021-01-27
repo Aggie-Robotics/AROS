@@ -13,7 +13,7 @@ const PACKET_START_BYTES: [u8; 6] = [132, 35, 53, 2, 100, 94];
 
 //TODO: Add packet resending
 #[derive(Debug)]
-pub struct ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<u8>, C: MessageStreamCreator<Vec<u8>>{
+pub struct ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<SData=u8, RData=u8>, C: MessageStreamCreator<Vec<u8>>{
     uf: UF,
     stream: S,
     outbound_stream: (C::Sender, C::Receiver),
@@ -21,7 +21,7 @@ pub struct ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexT
     send_sequence_counter: AtomicU64,
     received_sequence_counter: AtomicU64,
 }
-impl<UF, S, C> ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<u8>, C: MessageStreamCreator<Vec<u8>> {
+impl<UF, S, C> ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<SData=u8, RData=u8>, C: MessageStreamCreator<Vec<u8>> {
     pub fn new(uf: UF, stream: S, creator: &C) -> Self {
         Self {
             uf,
@@ -125,8 +125,9 @@ impl<UF, S, C> ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: Dup
         }
     }
 }
-impl<UF, S, C> SendStream<Vec<u8>> for ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<u8>, C: MessageStreamCreator<Vec<u8>>{
-    type Error = <C::Sender as SendStream<Vec<u8>>>::Error;
+impl<UF, S, C> SendStream for ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<SData=u8, RData=u8>, C: MessageStreamCreator<Vec<u8>>{
+    type SData = Vec<u8>;
+    type Error = <C::Sender as SendStream>::Error;
 
     fn send(&self, val: Vec<u8>) -> Result<(), Self::Error> {
         self.outbound_stream.0.send(val)
@@ -136,8 +137,9 @@ impl<UF, S, C> SendStream<Vec<u8>> for ChecksumByteStream<UF, S, C> where UF: Un
         self.outbound_stream.0.send_vec(data)
     }
 }
-impl<UF, S, C> ReceiveStream<Vec<u8>> for ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<u8>, C: MessageStreamCreator<Vec<u8>>{
-    type Error = <C::Receiver as ReceiveStream<Vec<u8>>>::Error;
+impl<UF, S, C> ReceiveStream for ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<SData=u8, RData=u8>, C: MessageStreamCreator<Vec<u8>>{
+    type RData = Vec<u8>;
+    type Error = <C::Receiver as ReceiveStream>::Error;
 
     fn try_receive(&self) -> Result<Option<Vec<u8>>, Self::Error> {
         self.inbound_stream.1.try_receive()
@@ -163,7 +165,7 @@ impl<UF, S, C> ReceiveStream<Vec<u8>> for ChecksumByteStream<UF, S, C> where UF:
         self.inbound_stream.1.receive_whole_vec(limit)
     }
 }
-impl<UF, S, C> DuplexStream<Vec<u8>> for ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<u8>, C: MessageStreamCreator<Vec<u8>>{}
+impl<UF, S, C> DuplexStream for ChecksumByteStream<UF, S, C> where UF: UniversalFunctions, S: DuplexTimeoutStream<SData=u8, RData=u8>, C: MessageStreamCreator<Vec<u8>>{}
 
 #[derive(Copy, Clone, Debug)]
 pub struct ChecksumByteTimeouts{
@@ -178,7 +180,7 @@ struct ChecksumHeader{
     sequence: u64,
 }
 impl ChecksumHeader{
-    fn get_packet(stream: &impl ReceiveTimoutStream<u8>, timeout: Duration, uf: &impl UniversalFunctions) -> Option<(ChecksumHeader, Option<Vec<u8>>)> {
+    fn get_packet(stream: &impl ReceiveTimoutStream<RData=u8>, timeout: Duration, uf: &impl UniversalFunctions) -> Option<(ChecksumHeader, Option<Vec<u8>>)> {
         let end_time = uf.system_time() + timeout;
         let mut length_bytes = [0; size_of::<u64>()];
         let header: ChecksumHeader = match stream.receive_all_timeout(&mut length_bytes, end_time - uf.system_time(), uf) {

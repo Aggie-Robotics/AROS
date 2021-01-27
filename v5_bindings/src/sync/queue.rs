@@ -4,7 +4,7 @@ use core::mem::{size_of, forget, MaybeUninit};
 use core::time::Duration;
 use cty::c_void;
 use crate::sync::option_to_timeout;
-use v5_traits::stream::{SendStream, SendTimeoutStream, ReceiveStream, ReceiveTimoutStream, DuplexStream, DuplexTimeoutStream, MessageStreamCreator};
+use v5_traits::stream::{SendStream, SendTimeoutStream, ReceiveStream, ReceiveTimoutStream, MessageStreamCreator};
 use v5_traits::error::CustomError;
 use v5_traits::UniversalFunctions;
 use alloc::sync::Arc;
@@ -54,7 +54,7 @@ impl<T> Queue<T> where T: 'static + Send{
 
     /// Pulls an item out of the queue
     /// Returns Some if item pulled or None if timeout reached
-    pub fn receive(&self, timeout: Option<Duration>) -> Option<T>{
+    pub fn queue_receive(&self, timeout: Option<Duration>) -> Option<T>{
         let mut out = MaybeUninit::uninit();
         if unsafe { queue_recv(self.queue, out.as_mut_ptr() as *mut c_void, option_to_timeout(timeout)) }{
             Some(unsafe { out.assume_init() })
@@ -75,7 +75,7 @@ impl<T> Queue<T> where T: 'static + Send{
 
     /// Clears all items from the queue dropping each
     pub fn clear(&self){
-        while let Some(item) = self.receive(Some(Duration::new(0, 0))){
+        while let Some(item) = self.queue_receive(Some(Duration::new(0, 0))){
             drop(item);
         }
     }
@@ -102,7 +102,8 @@ impl<T> Drop for Queue<T> where T: 'static + Send{
 }
 unsafe impl<T> Send for Queue<T> where T: 'static + Send{}
 unsafe impl<T> Sync for Queue<T> where T: 'static + Send{}
-impl<T> SendStream<T> for Queue<T> where T: 'static + Send{
+impl<T> SendStream for Queue<T> where T: 'static + Send{
+    type SData = T;
     type Error = ();
 
     fn send(&self, val: T) -> Result<(), Self::Error> {
@@ -114,7 +115,7 @@ impl<T> SendStream<T> for Queue<T> where T: 'static + Send{
         }
     }
 }
-impl<T> SendTimeoutStream<T> for Queue<T> where T: 'static + Send{
+impl<T> SendTimeoutStream for Queue<T> where T: 'static + Send{
     fn send_timeout(&self, val: T, timeout: Duration, _uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
         match self.append(val, Some(timeout)){
             Ok(_) => Ok(None),
@@ -122,27 +123,26 @@ impl<T> SendTimeoutStream<T> for Queue<T> where T: 'static + Send{
         }
     }
 }
-impl<T> ReceiveStream<T> for Queue<T> where T: 'static + Send{
+impl<T> ReceiveStream for Queue<T> where T: 'static + Send{
+    type RData = T;
     type Error = CustomError;
 
     fn try_receive(&self) -> Result<Option<T>, Self::Error> {
-        Ok(self.receive(Some(Duration::new(0, 0))))
+        Ok(self.queue_receive(Some(Duration::new(0, 0))))
     }
 
     fn receive(&self) -> Result<T, Self::Error> {
-        match self.receive(None){
+        match self.queue_receive(None){
             None => Err(CustomError::new(true, "Queue returned non wit hno timeout")),
             Some(val) => Ok(val),
         }
     }
 }
-impl<T> ReceiveTimoutStream<T> for Queue<T> where T: 'static + Send{
+impl<T> ReceiveTimoutStream for Queue<T> where T: 'static + Send{
     fn receive_timeout(&self, timeout: Duration, _uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
-        Ok(self.receive(Some(timeout)))
+        Ok(self.queue_receive(Some(timeout)))
     }
 }
-impl<T> DuplexStream<T> for Queue<T> where T: 'static + Send{}
-impl<T> DuplexTimeoutStream<T> for Queue<T> where T: 'static + Send{}
 
 #[derive(Copy, Clone, Debug)]
 pub struct QueueCreator1k();
@@ -186,7 +186,7 @@ pub mod test{
                 return Err(format!("Could not insert {} into queue", insert_val));
             }
             assert(queue.len() == 1, format!("Queue length invalid! Should be: {}, is {}", 1, queue.len()))?;
-            let received = queue.receive(Some(Duration::from_millis(100)));
+            let received = queue.queue_receive(Some(Duration::from_millis(100)));
             assert(received.is_some(), format!("Could not pull from queue"))?;
             assert(received.unwrap() == insert_val, format!("Value from queue wrong! Should be: {}, is: {}", insert_val, received.unwrap()))?;
             assert(queue.len() == 0, format!("Queue length invalid after received! Should be: {}, is {}", 0, queue.len()))?;

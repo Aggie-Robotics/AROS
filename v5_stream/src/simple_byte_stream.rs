@@ -7,14 +7,14 @@ use core::mem::size_of;
 #[derive(Debug)]
 pub struct SimpleByteStream<UF, S>
     where UF: UniversalFunctions,
-          S: DuplexStream<u8>{
+          S: DuplexStream<SData=u8, RData=u8>{
     uf: UF,
     stream: S,
 
 }
 impl<UF, S> SimpleByteStream<UF, S>
     where UF: UniversalFunctions,
-          S: DuplexStream<u8>{
+          S: DuplexStream<SData=u8, RData=u8>{
     pub fn new(uf: UF, stream: S) -> Self{
         Self{
             uf,
@@ -22,20 +22,22 @@ impl<UF, S> SimpleByteStream<UF, S>
         }
     }
 }
-impl<UF, S> SendStream<Vec<u8>> for SimpleByteStream<UF, S>
+impl<UF, S> SendStream for SimpleByteStream<UF, S>
     where UF: UniversalFunctions,
-          S: DuplexStream<u8>{
-    type Error = <S as SendStream<u8>>::Error;
+          S: DuplexStream<SData=u8, RData=u8>{
+    type SData = Vec<u8>;
+    type Error = <S as SendStream>::Error;
 
     fn send(&self, val: Vec<u8>) -> Result<(), Self::Error> {
         self.stream.send_slice(&(val.len() as u64).to_be_bytes())?;
         self.stream.send_vec(val)
     }
 }
-impl<UF, S> ReceiveStream<Vec<u8>> for SimpleByteStream<UF, S>
+impl<UF, S> ReceiveStream for SimpleByteStream<UF, S>
     where UF: UniversalFunctions,
-          S: DuplexStream<u8>{
-    type Error = <S as ReceiveStream<u8>>::Error;
+          S: DuplexStream<SData=u8, RData=u8>{
+    type RData = Vec<u8>;
+    type Error = <S as ReceiveStream>::Error;
 
     fn try_receive(&self) -> Result<Option<Vec<u8>>, Self::Error> {
         let byte = match self.stream.try_receive()?{
@@ -60,6 +62,6 @@ impl<UF, S> ReceiveStream<Vec<u8>> for SimpleByteStream<UF, S>
         Ok(data)
     }
 }
-impl<UF, S> DuplexStream<Vec<u8>> for SimpleByteStream<UF, S>
+impl<UF, S> DuplexStream for SimpleByteStream<UF, S>
     where UF: UniversalFunctions,
-          S: DuplexStream<u8>{}
+          S: DuplexStream<SData=u8, RData=u8>{}

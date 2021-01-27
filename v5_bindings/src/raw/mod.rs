@@ -21,6 +21,6 @@ pub static O_WRONLY: c_int = 01;
 pub fn str_to_char_ptr(str: &str) -> CString{
     CString::new(str).expect(format!("Cannot create CString! from {}", str).as_str())
 }
-pub fn fmt_to_char_ptr(fmt: &impl Display) -> CString{
+pub fn fmt_to_char_ptr(fmt: impl Display) -> CString{
     CString::new(format!("{}", fmt)).expect(format!("Cannot create CString! from {}", fmt).as_str())
 }

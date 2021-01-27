@@ -4,6 +4,13 @@
 extern crate std;
 
 extern crate alloc;
+
+pub mod error;
+pub mod stream;
+pub mod mutex;
+pub mod sync_cell;
+pub mod task;
+
 use core::time::Duration;
 use core::fmt::{Display, Debug};
 use alloc::sync::Arc;
@@ -11,15 +18,10 @@ use alloc::string::String;
 use core::ops::Deref;
 use alloc::format;
 
-pub mod error;
-pub mod stream;
-pub mod sync;
-pub mod task;
-
 pub trait EnsureSend: Send{}
 pub trait EnsureSync: Sync{}
 
-pub trait UniversalFunctions: Clone + Debug + Send + Sync{
+pub trait UniversalFunctions: 'static + Clone + Debug + Send + Sync{
 
     /// Delays the current thread for duration
     fn delay(&self, duration: Duration);
@@ -118,7 +120,7 @@ pub trait FormattedUniversal: Clone + Debug + Send + Sync{
     fn get_universal(&self) -> &Self::U;
     fn format(&self, message: impl Display) -> Self::D;
 }
-impl<T> UniversalFunctions for T where T: FormattedUniversal{
+impl<T> UniversalFunctions for T where T: 'static + FormattedUniversal{
     fn delay(&self, duration: Duration) {
         self.get_universal().delay(duration)
     }

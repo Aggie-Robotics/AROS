@@ -42,9 +42,9 @@ pub fn system_time() -> Duration {
     Duration::from_millis(unsafe { raw::pros::rtos::millis() } as u64)
 }
 
-pub fn console_print(fmt: &impl Display){
+pub fn console_print(fmt: impl Display){
     unsafe {printf(fmt_to_char_ptr(fmt).as_ptr())};
 }
-pub fn console_println(fmt: &impl Display){
+pub fn console_println(fmt: impl Display){
     console_print(&format!("{}\n", fmt))
 }
