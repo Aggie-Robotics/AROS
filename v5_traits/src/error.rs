@@ -1,6 +1,6 @@
 use core::fmt::{Debug, Display};
 use alloc::boxed::Box;
-use alloc::format;
+use core::convert::Infallible;
 
 pub trait Error: 'static + Debug{
     fn is_recoverable(&self) -> bool;
@@ -57,7 +57,7 @@ impl<E1, E2> From<E1> for ComboError<E1, E2> where E1: Error, E2: Error{
     }
 }
 
-impl Error for (){
+impl Error for Infallible{
     fn is_recoverable(&self) -> bool {
         true
     }

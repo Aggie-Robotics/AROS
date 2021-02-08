@@ -5,7 +5,6 @@ use core::time::Duration;
 use cty::c_void;
 use crate::sync::option_to_timeout;
 use v5_traits::stream::{SendStream, SendTimeoutStream, ReceiveStream, ReceiveTimoutStream, MessageStreamCreator};
-use v5_traits::error::CustomError;
 use v5_traits::UniversalFunctions;
 use alloc::sync::Arc;
 
@@ -104,43 +103,39 @@ unsafe impl<T> Send for Queue<T> where T: 'static + Send{}
 unsafe impl<T> Sync for Queue<T> where T: 'static + Send{}
 impl<T> SendStream for Queue<T> where T: 'static + Send{
     type SData = T;
-    type Error = ();
 
-    fn send(&self, val: T) -> Result<(), Self::Error> {
-        if let Err(_) = self.append(val, None){
-            Err(())
-        }
-        else{
-            Ok(())
+    fn send(&self, val: T) {
+        match self.append(val, None){
+            Ok(_) => {},
+            Err(_) => unreachable!(),
         }
     }
 }
 impl<T> SendTimeoutStream for Queue<T> where T: 'static + Send{
-    fn send_timeout(&self, val: T, timeout: Duration, _uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
+    fn send_timeout(&self, val: T, timeout: Duration, _uf: &impl UniversalFunctions) -> Option<T> {
         match self.append(val, Some(timeout)){
-            Ok(_) => Ok(None),
-            Err(error) => Ok(Some(error))
+            Ok(_) => None,
+            Err(error) => Some(error)
         }
     }
 }
 impl<T> ReceiveStream for Queue<T> where T: 'static + Send{
     type RData = T;
-    type Error = CustomError;
 
-    fn try_receive(&self) -> Result<Option<T>, Self::Error> {
-        Ok(self.queue_receive(Some(Duration::new(0, 0))))
+    fn try_receive(&self) -> Option<T> {
+        self.queue_receive(Some(Duration::new(0, 0)))
     }
 
-    fn receive(&self) -> Result<T, Self::Error> {
+    fn receive(&self) -> T {
         match self.queue_receive(None){
-            None => Err(CustomError::new(true, "Queue returned non wit hno timeout")),
-            Some(val) => Ok(val),
+            None => unreachable!("Queue returned none with no timeout"),
+            Some(val) => val,
         }
     }
 }
 impl<T> ReceiveTimoutStream for Queue<T> where T: 'static + Send{
-    fn receive_timeout(&self, timeout: Duration, _uf: &impl UniversalFunctions) -> Result<Option<T>, Self::Error> {
-        Ok(self.queue_receive(Some(timeout)))
+    fn receive_timeout(&self, timeout: Duration, _uf: &impl UniversalFunctions) -> Option<T> {
+        self.queue_receive(Some(timeout))
     }
 }
 

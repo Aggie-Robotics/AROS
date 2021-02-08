@@ -1,8 +1,9 @@
 #![no_std]
 
 #[cfg(feature = "std")]
+#[macro_use]
 extern crate std;
-
+#[macro_use]
 extern crate alloc;
 
 pub mod error;
@@ -16,7 +17,6 @@ use core::fmt::{Display, Debug};
 use alloc::sync::Arc;
 use alloc::string::String;
 use core::ops::Deref;
-use alloc::format;
 
 pub trait EnsureSend: Send{}
 pub trait EnsureSync: Sync{}

@@ -1,20 +1,18 @@
 use core::time::Duration;
 use core::cell::UnsafeCell;
 use crate::EnsureSend;
-use core::ops::{Deref, DerefMut};
 
-pub trait Mutex<'m>: Send + Sync{
+pub trait Mutex: Send + Sync{
     type Inner: Send;
-    type Guard: DerefMut<Target=Self::Inner>;
 
     fn new(val: Self::Inner) -> Self where Self: Sized;
-    fn lock(&'m self) -> Self::Guard;
+    fn lock<R>(&self, f: impl FnOnce(&mut Self::Inner) -> R) -> R;
     fn is_locked(&self) -> bool;
-    fn try_lock(&'m self) -> Option<Self::Guard>;
+    fn try_lock<R, F>(&self, f: F) -> Result<R, F> where F: FnOnce(&mut Self::Inner) -> R;
     fn into_inner(self) -> Self::Inner;
 }
-pub trait MutexTimeout<'m>: Mutex<'m>{
-    fn lock_timeout(&self, timeout: Duration) -> Option<Self::Guard>;
+pub trait MutexTimeout: Mutex{
+    fn lock_timeout<R, F>(&self, timeout: Duration, f: F) -> Result<R, F> where F: FnOnce(&mut Self::Inner) -> R;
 }
 
 pub trait MutexInner: Send + Sync + Default{
@@ -22,6 +20,8 @@ pub trait MutexInner: Send + Sync + Default{
     fn is_locked(&self) -> bool;
     /// Returns true if this call locked the mutex
     fn try_lock(&self) -> bool;
+    /// # Safety
+    /// This function is not safe to call as singular access may be broken
     unsafe fn unlock(&self);
 }
 pub trait MutexTimeoutInner: MutexInner + Send + Sync{
@@ -37,29 +37,32 @@ impl<M, T> CustomMutex<M, T> where M: MutexInner, T: Send{
         Self{ mutex_inner, data: UnsafeCell::new(val) }
     }
 }
-impl<'m, M, T> Mutex<'m> for CustomMutex<M, T> where M: 'static + MutexInner, T: 'static + Send{
+impl<M, T> Mutex for CustomMutex<M, T> where M: MutexInner, T: Send{
     type Inner = T;
-    type Guard = MutexGuard<'m, M, T>;
 
     fn new(val: T) -> Self where Self: Sized {
         Self{ mutex_inner: Default::default(), data: UnsafeCell::new(val) }
     }
 
-    fn lock(&'m self) -> Self::Guard {
+    fn lock<R>(&self, f: impl FnOnce(&mut Self::Inner) -> R) -> R {
         self.mutex_inner.lock();
-        MutexGuard{ mutex: self }
+        let out = f(unsafe { &mut *self.data.get() });
+        unsafe { self.mutex_inner.unlock() };
+        out
     }
 
     fn is_locked(&self) -> bool {
         self.mutex_inner.is_locked()
     }
 
-    fn try_lock(&'m self) -> Option<Self::Guard> {
+    fn try_lock<R, F>(&self, f: F) -> Result<R, F> where F: FnOnce(&mut Self::Inner) -> R {
         if self.mutex_inner.try_lock(){
-            Some(MutexGuard{ mutex: self })
+            let out = f(unsafe{ &mut *self.data.get() });
+            unsafe { self.mutex_inner.unlock() };
+            Ok(out)
         }
         else{
-            None
+            Err(f)
         }
     }
 
@@ -67,26 +70,20 @@ impl<'m, M, T> Mutex<'m> for CustomMutex<M, T> where M: 'static + MutexInner, T:
         self.data.into_inner()
     }
 }
+impl<M, T> MutexTimeout for CustomMutex<M, T> where M: MutexTimeoutInner, T: Send{
+    fn lock_timeout<R, F>(&self, timeout: Duration, f: F) -> Result<R, F> where F: FnOnce(&mut Self::Inner) -> R {
+        if self.mutex_inner.lock_timeout(timeout){
+            unsafe{
+                let out = f(&mut *self.data.get());
+                self.mutex_inner.unlock();
+                Ok(out)
+            }
+        }
+        else{
+            Err(f)
+        }
+    }
+}
 unsafe impl<M, T> Sync for CustomMutex<M, T> where M: MutexInner, T: Send{}
 impl<M, T> EnsureSend for CustomMutex<M, T> where M: MutexInner, T: Send{}
 
-pub struct MutexGuard<'m, M, T> where M: MutexInner, T: Send{
-    mutex: &'m CustomMutex<M, T>,
-}
-impl<'m, M, T> Deref for MutexGuard<'m, M, T> where M: MutexInner, T: Send{
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        unsafe{&*self.mutex.data.get()}
-    }
-}
-impl<'m, M, T> DerefMut for MutexGuard<'m, M, T> where M: MutexInner, T: Send{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe {&mut *self.mutex.data.get()}
-    }
-}
-impl<'m, M, T> Drop for MutexGuard<'m, M, T> where M: MutexInner, T: Send{
-    fn drop(&mut self) {
-        unsafe { self.mutex.mutex_inner.unlock() }
-    }
-}
